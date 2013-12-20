@@ -11,7 +11,7 @@ var userList = [];
 //Callオブジェクト
 var existingCall;
 
-// Compatibility shim
+// Compatibility
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 // PeerJSオブジェクトを生成
@@ -22,14 +22,13 @@ peer.on('open', function(){
     $('#my-id').text(peer.id);
 });
 
-// 相手からのコールを受信する
+// 相手からのコールを受信したら自身のメディアストリームをセットして返答
 peer.on('call', function(call){
-    // 自身のメディアストリームをセットしてアンサーを返す
     call.answer(window.localStream);
     step3(call);
 });
 
-// エラーハンドラ
+// エラーハンドラー
 peer.on('error', function(err){
     alert(err.message);
     step2();
@@ -38,13 +37,14 @@ peer.on('error', function(err){
 // イベントハンドラー
 $(function(){
 
+    // 相手に接続
     $('#make-call').click(function(){
-        // 相手に接続
         var call = peer.call($('#contactlist').val(), window.localStream);
         step3(call);
 
     });
 
+    // 切断
     $('#end-call').click(function(){
         existingCall.close();
         step2();
@@ -67,7 +67,6 @@ $(function(){
 function step1 () {
     // メディアストリームを取得する
     navigator.getUserMedia({audio: true, video: true}, function(stream){
-        // 自分のVIDEOタグにメディアストリームをセットする
         $('#my-video').prop('src', URL.createObjectURL(stream));
         window.localStream = stream;
         step2();
@@ -94,7 +93,10 @@ function step3 (call) {
     // 相手がクローズした場合
     call.on('close', step2);
 
+    // Callオブジェクトを保存
     existingCall = call;
+
+    // UIコントロール
     $('#their-id').text(call.peer);
     $('#step1, #step2').hide();
     $('#step3').show();
@@ -102,6 +104,7 @@ function step3 (call) {
 }
 
 function getUserList () {
+    //ユーザリストを取得
     $.get('https://skyway.io/active/list/'+APIKEY,
         function(list){
             for(var cnt = 0;cnt < list.length;cnt++){
