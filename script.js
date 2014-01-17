@@ -3,7 +3,7 @@
  */
 
 //APIキー
-var APIKEY = '6165842a-5c0d-11e3-b514-75d3313b9d05';
+var APIKEY = '5787557a-7f38-11e3-b7a2-2f2b5bb56f4d';
 
 //ユーザーリスト
 var userList = [];
@@ -17,6 +17,18 @@ navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia 
 // PeerJSオブジェクトを生成
 var peer = new Peer({ key: APIKEY, debug: 3});
 
+// SpeechSynthesisオブジェクトを生成
+var msg = new SpeechSynthesisUtterance();
+msg.volume = 1; // 0 to 1
+msg.rate = 1; // 0.1 to 10
+msg.pitch = 2; //0 to 2
+msg.lang = 'ja-JP';
+msg.onend = function(e) {
+    console.log('Finished in ' + event.elapsedTime + ' seconds.');
+};
+
+var conn;
+
 // PeerIDを生成
 peer.on('open', function(){
     $('#my-id').text(peer.id);
@@ -26,6 +38,18 @@ peer.on('open', function(){
 peer.on('call', function(call){
     call.answer(window.localStream);
     step3(call);
+});
+
+// 相手からのDataChannelの接続要求を受信した場合
+peer.on('connection', function(conn_) {
+    conn = conn_;
+    conn.on('open', function() {
+        // メッセージを受信
+        conn.on('data', function(data) {
+            msg.text = data;
+            speechSynthesis.speak(msg);
+        });
+    });
 });
 
 // エラーハンドラー
@@ -40,7 +64,8 @@ $(function(){
     // 相手に接続
     $('#make-call').click(function(){
         var call = peer.call($('#contactlist').val(), window.localStream);
-        step3(call);
+        conn = peer.connect($('#contactlist').val());
+        step3(call,conn);
 
     });
 
@@ -48,6 +73,11 @@ $(function(){
     $('#end-call').click(function(){
         existingCall.close();
         step2();
+    });
+
+    // 送信
+    $('#sendtext').click(function(){
+        conn.send($('#textdata').val());
     });
 
     // メディアストリームを再取得
@@ -79,7 +109,7 @@ function step2 () {
     $('#step2').show();
 }
 
-function step3 (call) {
+function step3 (call,conn) {
     // すでに接続中の場合はクローズする
     if (existingCall) {
         existingCall.close();
@@ -88,10 +118,21 @@ function step3 (call) {
     // 相手からのメディアストリームを待ち受ける
     call.on('stream', function(stream){
         $('#their-video').prop('src', URL.createObjectURL(stream));
+        $('#step1, #step2').hide();
+        $('#step3').show();
     });
 
     // 相手がクローズした場合
     call.on('close', step2);
+
+    // DataChannel関連のイベント
+    conn.on('open', function() {
+        // メッセージを受信
+        conn.on('data', function(data) {
+            msg.text = data;
+            speechSynthesis.speak(msg);
+        });
+    });
 
     // Callオブジェクトを保存
     existingCall = call;
