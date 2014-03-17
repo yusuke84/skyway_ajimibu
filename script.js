@@ -3,7 +3,7 @@
  */
 
 //APIキー
-var APIKEY = '5787557a-7f38-11e3-b7a2-2f2b5bb56f4d';
+var APIKEY = 'fc444cfa-840e-11e3-bb66-e330cbbe8169';
 
 //ユーザーリスト
 var userList = [];
@@ -46,8 +46,10 @@ peer.on('connection', function(conn_) {
     conn.on('open', function() {
         // メッセージを受信
         conn.on('data', function(data) {
-            msg.text = data;
-            speechSynthesis.speak(msg);
+            binary2str(data,function(str){
+                msg.text = str;
+                speechSynthesis.speak(msg);
+            });
         });
     });
 });
@@ -77,7 +79,10 @@ $(function(){
 
     // 送信
     $('#sendtext').click(function(){
-        conn.send($('#textdata').val());
+        str2binary($('#textdata').val(),function(bin){
+            conn.send(bin);
+        });
+
     });
 
     // メディアストリームを再取得
@@ -125,14 +130,18 @@ function step3 (call,conn) {
     // 相手がクローズした場合
     call.on('close', step2);
 
-    // DataChannel関連のイベント
-    conn.on('open', function() {
-        // メッセージを受信
-        conn.on('data', function(data) {
-            msg.text = data;
-            speechSynthesis.speak(msg);
+    if(conn != null){
+        // DataChannel関連のイベント
+        conn.on('open', function() {
+            // メッセージを受信
+            conn.on('data', function(data) {
+                binary2str(data,function(str){
+                    msg.text = str;
+                    speechSynthesis.speak(msg);
+                });
+            });
         });
-    });
+    }
 
     // Callオブジェクトを保存
     existingCall = call;
@@ -157,4 +166,22 @@ function getUserList () {
         }
     );
 }
+
+function str2binary(str, callback){
+    var reader = new FileReader();
+    reader.onload = function(e){
+        callback(reader.result);
+    };
+    reader.readAsArrayBuffer(new Blob([str]));
+}
+
+function binary2str(message, callback){
+    var reader = new FileReader();
+    reader.onload = function(e){
+        message = reader.result;
+        callback(message);
+    };
+    reader.readAsText(new Blob([message]));
+}
+
 
